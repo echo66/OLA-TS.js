@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <script type="text/javascript" src="ola.js"></script>
+    <script type="text/javascript">
+      var context = new AudioContext();
+      var BUFFER_SIZE = 4096;
+      var FRAME_SIZE  = 4096;
+      var node = context.createScriptProcessor(BUFFER_SIZE, 2);
+      var olaL = new OLA(FRAME_SIZE, BUFFER_SIZE);
+      var olaR = new OLA(FRAME_SIZE, BUFFER_SIZE);
+      var buffer;
+      var position = 0;
+      var alpha = 1;
+      var outBufferL = [];
+      var outBufferR = [];
+
+      loadSample = function(url, id) {
+          var request = new XMLHttpRequest();
+          request.open('GET', url, true);
+          request.responseType = 'arraybuffer';
+
+          request.onload = function() {
+              context.decodeAudioData(request.response, function(decodedData) {
+
+                  buffer = decodedData;
+
+                  node.onaudioprocess = function(e) {
+
+                    do {
+
+                      var bufL = buffer.getChannelData(0).subarray(position, position + FRAME_SIZE);
+                      var bufR = buffer.getChannelData(1).subarray(position, position + FRAME_SIZE);
+
+                      var a = alpha;
+
+                      olaL.set_alpha(a);
+                      olaR.set_alpha(a);
+
+                      outBufferL = outBufferL.concat(olaL.process(bufL));
+                      outBufferR = outBufferR.concat(olaR.process(bufR));
+
+                      position += olaL.get_ra();
+
+                    } while (outBufferL.length <= BUFFER_SIZE && outBufferR.length <= BUFFER_SIZE);
+
+                    e.outputBuffer.getChannelData(0).set(outBufferL.splice(0, BUFFER_SIZE));
+                    e.outputBuffer.getChannelData(1).set(outBufferR.splice(0, BUFFER_SIZE));
+
+                  }
+
+                  node.connect(context.destination);
+
+                  console.log("decoded");
+
+              });
+          };
+          request.send();
+      };
+
+      loadSample('http://localhost/soundtouchjs/3.mp3');
+
+
+    </script>
+  </body>
+</html>
