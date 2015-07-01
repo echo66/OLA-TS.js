@@ -6,17 +6,19 @@
       <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <script type="text/javascript" src="ola.js"></script>
+    <script type="text/javascript" src="OLA.js"></script>
     <script type="text/javascript">
       var context = new AudioContext();
-      var BUFFER_SIZE = 4096;
-      var FRAME_SIZE  = 4096;
+      var BUFFER_SIZE = 1024;
+      var FRAME_SIZE  = 1024;
       var node = context.createScriptProcessor(BUFFER_SIZE, 2);
-      var olaL = new OLA(FRAME_SIZE, BUFFER_SIZE);
-      var olaR = new OLA(FRAME_SIZE, BUFFER_SIZE);
+      var olaL = new OLATS(FRAME_SIZE);
+      var olaR = new OLATS(FRAME_SIZE);
       var buffer;
       var position = 0;
       var alpha = 1;
+      var overlap = 2.2;
+      var beta = 15;
       var outBufferL = [];
       var outBufferR = [];
 
@@ -38,6 +40,14 @@
                       var bufR = buffer.getChannelData(1).subarray(position, position + FRAME_SIZE);
 
                       var a = alpha;
+                      var o = overlap;
+                      var b = beta;
+
+                      olaL.set_overlap(o);
+                      olaR.set_overlap(o);
+
+                      olaL.set_beta(b);
+                      olaR.set_beta(b);
 
                       olaL.set_alpha(a);
                       olaR.set_alpha(a);
@@ -63,7 +73,7 @@
           request.send();
       };
 
-      loadSample('http://localhost/soundtouchjs/3.mp3');
+      loadSample('http://localhost/soundtouchjs/2.mp3');
 
 
     </script>
