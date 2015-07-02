@@ -67,6 +67,10 @@ function OLATS(frameSize, windowType) {
       _overlapFactor = _alpha + 0.4;
     } else if (_alpha >= 1.8 && _alpha < 2) {
       _overlapFactor = _alpha + 0.8;
+    } else if (_alpha >= 2 && _alpha < 2.5) {
+      _overlapFactor = _alpha + 1.5;
+    } else if (_alpha >= 2.5 && _alpha <= 3) {
+      _overlapFactor = _alpha + 1.9;
     }
 
     // Fixed analysis hop
@@ -87,6 +91,10 @@ function OLATS(frameSize, windowType) {
     for (var i=0; i<_squaredFramingWindow.length; i++) 
       _squaredFramingWindow[i] = Math.pow(_window[i], 1);
     
+  }
+
+  this.set_overlap = function(newOverlap) {
+    _overlapFactor = newOverlap;
   }
 
 
