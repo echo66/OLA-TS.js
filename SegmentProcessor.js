@@ -31,34 +31,22 @@ function SegmentProcessor(audioData, frameSize) {
 
       var inputSamplesCount = 0;
 
-      while (inputSamplesCount < FRAME_SIZE) {
+      var _position = position;
 
-        // Retrieve FRAME_SIZE samples from the audio buffer, 
-        // unless the number of remaining samples in the current 
-        // interval is smaller than FRAME_SIZE.
-        var naturalFrameEnd = position + FRAME_SIZE;
-        var frameEnd = Math.min(naturalFrameEnd, intervals[currentInterval][1]);
+      for (var i=currentInterval; inputSamplesCount < FRAME_SIZE && i<intervals.length; i++) {
 
-        il.set(buffer.getChannelData(0).subarray(position, frameEnd));
-        ir.set(buffer.getChannelData(1).subarray(position, frameEnd));
+        if (_position==undefined)
+          _position = intervals[i][0];
 
-        midBPM += ((frameEnd - position) / FRAME_SIZE) * intervals[currentInterval][2];
-        // console.log(midBPM);
+        var incr = Math.min(FRAME_SIZE - inputSamplesCount, intervals[i][1] - intervals[i][0]);
+        il.set(buffer.getChannelData(0).subarray(_position, _position + incr), inputSamplesCount);
+        ir.set(buffer.getChannelData(1).subarray(_position, _position + incr), inputSamplesCount);
 
-        inputSamplesCount += frameEnd - position;
+        midBPM += (incr/FRAME_SIZE) *  intervals[i][2];
 
-        if (frameEnd < naturalFrameEnd) {
-          // When we request more samples than the available in the 
-          // current interval, if there is another interval in the queue, 
-          // copy samples from the start of that next interval and mark 
-          // it as the new current interval. Otherwise, fill the remaining 
-          // input with zeros.
-          currentInterval++;
-          if (currentInterval < intervals.length)
-            position = intervals[currentInterval][0];
-          else 
-            break;
-        }
+        inputSamplesCount += incr;
+
+        _position = undefined;
 
       }
 
@@ -74,13 +62,23 @@ function SegmentProcessor(audioData, frameSize) {
       midBufferL = midBufferL.concat(olaL.process(il));
       midBufferR = midBufferR.concat(olaR.process(ir));
 
-      var newPosition = position + olaL.get_ra();
+      var hop = olaL.get_ra();
 
-      if (intervals[currentInterval] && newPosition > intervals[currentInterval][1]) {
+      var newPosition = position + hop;
+
+      if (newPosition > intervals[currentInterval][1]) {
+        var oldIntervalEnd = intervals[currentInterval][1];
         currentInterval++;
+        console.log("next")
+        if (intervals[currentInterval]) {
+          position = intervals[currentInterval][0] + newPosition - oldIntervalEnd;
+        } else {
+          position = oldIntervalEnd;
+          break;
+        }
+      } else {
+        position = newPosition;
       }
-
-      position = newPosition;
 
     }
 
@@ -107,24 +105,30 @@ function SegmentProcessor(audioData, frameSize) {
       position = intervals[index][0];
   }
 
-  this.add_interval = function(start, end, bpm, index) {
-    var i = (index==undefined)? intervals.length : index;
-    if (intervals.length == 0)
+  this.add_interval = function(params) {
+    var i = (params.index==undefined)? intervals.length : params.index;
+    intervals.splice(i, 0, [params.start, params.end, params.bpm, params.id]);
+    if (intervals.length == 1) {
       currentInterval = 0;
-    intervals.splice(i, 0, [start, end, bpm]);
+      position = intervals[0][0];
+    }
   }
 
   this.remove_interval = function(index) {
     intervals.splice(index,1);
   }
 
+  this.remove_interval_q = function(index) {
+
+  }
+
   this.get_intervals = function() {
     var _intervals = new Array(intervals.length);
 
     for (var i=0; i<intervals.length; i++) {
-    _intervals[i] = new Array(intervals[i].lengt);
-    for (var j=0; j<intervals[i].length; j++) 
-    _intervals[i][j] = intervals[i][j];
+      _intervals[i] = new Array(intervals[i].lengt);
+      for (var j=0; j<intervals[i].length; j++) 
+        _intervals[i][j] = intervals[i][j];
     }
 
     return _intervals;
