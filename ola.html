@@ -8,6 +8,7 @@
   <body>
     <script type="text/javascript" src="OLA.js"></script>
     <script type="text/javascript">
+
       var context = new AudioContext();
       var BUFFER_SIZE = 4096;
       var FRAME_SIZE  = 4096;
@@ -66,7 +67,7 @@
           request.send();
       };
 
-      loadSample('http://localhost/soundtouchjs/4.mp3');
+      loadSample('http://localhost/soundtouchjs/3.mp3');
 
       function set_beta(newBeta) {
         olaL.set_beta(newBeta);

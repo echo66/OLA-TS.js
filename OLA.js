@@ -59,23 +59,33 @@ function OLATS(frameSize, windowType) {
   this.set_alpha = function(newAlpha) {
     _alpha = newAlpha;
 
+    if (_alpha <= 1) {
+      this.set_beta(1);
+    } else if (_alpha <= 1.2) {
+      this.set_beta(1.5)
+    } else if (_alpha > 1.2) {
+      this.set_beta(2.5);
+    }
+
     if (_alpha < 1.25) {
       _overlapFactor = _alpha + 0.1;
     } else if (_alpha >= 1.25 && _alpha < 1.5) {
       _overlapFactor = _alpha + 0.2;
     } else if (_alpha >= 1.5 && _alpha < 1.8) {
-      _overlapFactor = _alpha + 0.4;
+      _overlapFactor = _alpha + 0.6;
     } else if (_alpha >= 1.8 && _alpha < 2) {
-      _overlapFactor = _alpha + 0.8;
+      _overlapFactor = _alpha + 0.9;
     } else if (_alpha >= 2 && _alpha < 2.5) {
-      _overlapFactor = _alpha + 1.5;
+      _overlapFactor = _alpha + 2.2;
     } else if (_alpha >= 2.5 && _alpha <= 3) {
-      _overlapFactor = _alpha + 1.9;
+      _overlapFactor = _alpha + 2.2;
     }
 
     // Fixed analysis hop
     _RA = Math.round(_frameSize/_overlapFactor);
     _RS = Math.round(_alpha * _RA);
+
+    // console.log([newAlpha, _RS/_RA]);
 
     // Fixed synthesis hop
     // _RS = Math.round(_frameSize/_overlapFactor);
@@ -85,7 +95,7 @@ function OLATS(frameSize, windowType) {
   this.set_beta = function(newBeta) {
     _beta = newBeta;
 
-    _window = create_window(frameSize, _beta, _windowType);
+    _window = create_window(_frameSize, _beta, _windowType);
 
     _squaredFramingWindow = new Float32Array(_window.length);
     for (var i=0; i<_squaredFramingWindow.length; i++) 
