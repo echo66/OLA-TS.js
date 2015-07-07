@@ -12,20 +12,21 @@ function SegmentProcessor(audioData, frameSize) {
   var refBPM;
   var il = new Float32Array(FRAME_SIZE);
   var ir = new Float32Array(FRAME_SIZE);
+  var zeros = new Float32Array(FRAME_SIZE * 2);
 
   this.process = function(outputAudioBuffer) {
 
     // If no intervals to be played are specified, no need to process anything.
     if (intervals.length == 0 || currentInterval >= intervals.length) {
-      var ol = outputAudioBuffer.getChannelData(0);
-      var or = outputAudioBuffer.getChannelData(1);
-      for (var i=0; i<FRAME_SIZE; i++) {
-        ol[i] = or[i] = 0;
-      }
+      outputAudioBuffer.getChannelData(0).set(zeros.subarray(0, outputAudioBuffer.length), 0);
+      outputAudioBuffer.getChannelData(1).set(zeros.subarray(0, outputAudioBuffer.length), 0);
       return;
     }
 
     while (midBufferL.length <= outputAudioBuffer.length && midBufferR.length <= outputAudioBuffer.length) {
+
+      if (position==undefined) 
+        position = intervals[currentInterval].start;
 
       var midBPM = 0;
 
@@ -36,13 +37,13 @@ function SegmentProcessor(audioData, frameSize) {
       for (var i=currentInterval; inputSamplesCount < FRAME_SIZE && i<intervals.length; i++) {
 
         if (_position==undefined)
-          _position = intervals[i][0];
+          _position = intervals[i].start;
 
-        var incr = Math.min(FRAME_SIZE - inputSamplesCount, intervals[i][1] - intervals[i][0]);
+        var incr = Math.min(FRAME_SIZE - inputSamplesCount, intervals[i].end - intervals[i].start);
         il.set(buffer.getChannelData(0).subarray(_position, _position + incr), inputSamplesCount);
         ir.set(buffer.getChannelData(1).subarray(_position, _position + incr), inputSamplesCount);
 
-        midBPM += (incr/FRAME_SIZE) *  intervals[i][2];
+        midBPM += (incr/FRAME_SIZE) *  intervals[i].bpm;
 
         inputSamplesCount += incr;
 
@@ -50,9 +51,8 @@ function SegmentProcessor(audioData, frameSize) {
 
       }
 
-      for (var i=inputSamplesCount; i<FRAME_SIZE; i++) {
-        il[i] = ir[i] = 0;
-      }
+      il.set(zeros.subarray(0,FRAME_SIZE-inputSamplesCount), inputSamplesCount);
+      ir.set(zeros.subarray(0,FRAME_SIZE-inputSamplesCount), inputSamplesCount);
 
       var bpm = (refBPM)? refBPM : midBPM;
       var alpha = midBPM / bpm;
@@ -66,14 +66,20 @@ function SegmentProcessor(audioData, frameSize) {
 
       var newPosition = position + hop;
 
-      if (newPosition > intervals[currentInterval][1]) {
-        var oldIntervalEnd = intervals[currentInterval][1];
+      if (newPosition > intervals[currentInterval].end) {
+        var oldIntervalEnd = intervals[currentInterval].end;
         currentInterval++;
-        console.log("next")
         if (intervals[currentInterval]) {
-          position = intervals[currentInterval][0] + newPosition - oldIntervalEnd;
+          position = intervals[currentInterval].start + newPosition - oldIntervalEnd;
         } else {
-          position = oldIntervalEnd;
+          position = undefined;
+          // Cleaning OLATS buffers and the output mid buffers is a good idea because to avoid certain problems with artifacts.
+          // "But what are the artifacts???", the young & innocent mind might ask. Experimentation and mistery are part of our 
+          // lifes.
+          olaL.clear_buffers();
+          olaR.clear_buffers();
+          midBufferL = [];
+          midBufferR = [];
           break;
         }
       } else {
@@ -98,19 +104,26 @@ function SegmentProcessor(audioData, frameSize) {
 
   this.set_current_interval = function(index, pos) {
     currentInterval = index;
-    var newPos = Math.min(pos, intervals[index][1]);
-    if (newPos != undefined) 
+    var newPos = Math.min(pos, intervals[index].start);
+    if (!isNaN(newPos) && newPos != undefined) 
       position = newPos;
     else 
-      position = intervals[index][0];
+      position = intervals[index].start;
   }
 
   this.add_interval = function(params) {
     var i = (params.index==undefined)? intervals.length : params.index;
-    intervals.splice(i, 0, [params.start, params.end, params.bpm, params.id]);
+    // intervals.splice(i, 0, [params.start, params.end, params.bpm, params.id]);
+    intervals.splice(i, 0, {
+      start: params.start, 
+      end: params.end, 
+      bpm: params.bpm, 
+      segId: params.id, 
+      silence: params.silence || false
+    });
     if (intervals.length == 1) {
       currentInterval = 0;
-      position = intervals[0][0];
+      position = intervals[0].start;
     }
   }
 
@@ -118,17 +131,22 @@ function SegmentProcessor(audioData, frameSize) {
     intervals.splice(index,1);
   }
 
-  this.remove_interval_q = function(index) {
-
+  this.remove_interval_q = function(selectorToRemoveFn) {
+    //TODO
+    for (var i=0; i<intervals.length; i++) {
+      if (selectToRemoveFn(intervals[i])) {
+        //TODO
+      }
+    }
   }
 
   this.get_intervals = function() {
     var _intervals = new Array(intervals.length);
 
     for (var i=0; i<intervals.length; i++) {
-      _intervals[i] = new Array(intervals[i].lengt);
-      for (var j=0; j<intervals[i].length; j++) 
-        _intervals[i][j] = intervals[i][j];
+      _intervals[i] = {};
+      for (var k in intervals[i]) 
+        _intervals[i][k] = intervals[i][k];
     }
 
     return _intervals;

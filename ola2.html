@@ -11,11 +11,12 @@
     <script type="text/javascript">
 
       var context = new AudioContext();
-      var BUFFER_SIZE = 4096;
+      var BUFFER_SIZE = 2048;
       var FRAME_SIZE  = 4096;
       var node = context.createScriptProcessor(BUFFER_SIZE, 2);
       var buffer;
       var segProc;
+      var data;
 
       function download_json(url, success, error) {
 
@@ -121,15 +122,24 @@
                     load_beats({
                       beats: beats, 
                       duration: buffer.duration
-                    }, function(data){
+                    }, function(_data){
+
+                      data = _data;
 
                       segProc = new SegmentProcessor(buffer, FRAME_SIZE);
+                      var rd = Math.round;
 
                       // segProc.add_interval(0, buffer.length-1, 130);
                       // segProc.add_interval({ start: Math.round(data[0][0]*44100), end: Math.round(data[3][1]*44100), bpm: data[0][2] });
                       // segProc.add_interval({ start: Math.round(data[0][0]*44100), end: Math.round(data[3][1]*44100), bpm: data[0][2] });
-                      segProc.add_interval({ start: Math.round(data[15][0]*44100), end: Math.round(data[22][1]*44100), bpm: data[15][2] });
-                      segProc.add_interval({ start: Math.round(data[15][0]*44100), end: Math.round(data[22][1]*44100), bpm: data[15][2] });
+                      // segProc.add_interval({ start: Math.round(data[15][0]*44100), end: Math.round(data[22][1]*44100), bpm: data[15][2] });
+                      // segProc.add_interval({ start: Math.round(data[15][0]*44100), end: Math.round(data[22][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31][0]*44100), end: rd(data[38][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31+16][0]*44100), end: rd(data[38+16][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31+32][0]*44100), end: rd(data[38+32][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31+64][0]*44100), end: rd(data[38+64][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31+64*4][0]*44100), end: rd(data[38+64*4][1]*44100), bpm: data[15][2] });
+                      segProc.add_interval({ start: rd(data[31+64*4][0]*44100), end: rd(data[38+64*4][1]*44100), bpm: data[15][2] });
 
 
 

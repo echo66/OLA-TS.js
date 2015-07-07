@@ -45,6 +45,12 @@ function OLATS(frameSize, windowType) {
 
   this.get_overlap_factor = function() { return _overlapFactor; }
 
+  this.clear_buffers = function() {
+    _midBuffer = new Float32Array(_frameSize);
+    _overlapBuffers = create_constant_array(_frameSize, 0, Array);
+    _owOverlapBuffers = create_constant_array(_frameSize, 0, Array);
+  }
+
 
   /*
    * --------------
@@ -63,8 +69,12 @@ function OLATS(frameSize, windowType) {
       this.set_beta(1);
     } else if (_alpha <= 1.2) {
       this.set_beta(1.5)
-    } else if (_alpha > 1.2) {
+    } else if (_alpha <= 1.4) {
+      this.set_beta(2.0);
+    } else if (_alpha <= 1.8) {
       this.set_beta(2.5);
+    } else {
+      this.set_beta(3.0);
     }
 
     if (_alpha < 1.25) {
@@ -126,8 +136,6 @@ function OLATS(frameSize, windowType) {
 
     var win = new Float32Array(length);
 
-    // for (var i=0; i<length; i++)
-    //   win[i] = Math.pow(Math.sin(Math.PI*i/length), beta);
     for (var i=0; i<length; i++) {
       win[i] = WindowFunctions[type](length, i, beta);
     }
@@ -148,7 +156,7 @@ function OLATS(frameSize, windowType) {
     Lanczos : function(length, index, beta) {
       var x = 2 * index / (length - 1) - 1;
       return Math.pow(Math.sin(Math.PI * x) / (Math.PI * x), beta);
-    },
+    }, 
 
     Triangular : function(length, index, beta) {
       return Math.pow(2 / length * (length / 2 - Math.abs(index - (length - 1) / 2)), beta);
@@ -166,7 +174,7 @@ function OLATS(frameSize, windowType) {
 
   this.set_alpha(1);
 
-  var _midBuffer = new Float32Array(_frameSize - _RS);
+  var _midBuffer = new Float32Array(_frameSize);
   
   this.set_beta(_beta);
 
