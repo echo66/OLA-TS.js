@@ -62,40 +62,46 @@ function OLATS(frameSize, windowType) {
     _overlapFactor = newOverlap;
   }
 
-  this.set_alpha = function(newAlpha) {
+  this.set_alpha = function(newAlpha, newOverlap, newBeta) {
     _alpha = newAlpha;
 
-    if (_alpha <= 1) {
-      this.set_beta(1);
-    } else if (_alpha <= 1.2) {
-      this.set_beta(1.5)
-    } else if (_alpha <= 1.4) {
-      this.set_beta(2.0);
-    } else if (_alpha <= 1.8) {
-      this.set_beta(2.5);
-    } else {
-      this.set_beta(3.0);
-    }
+    if (newBeta == undefined)
+      if (_alpha <= 1) {
+        this.set_beta(2);
+      } else if (_alpha <= 1.2) {
+        this.set_beta(2.0)
+      } else if (_alpha <= 1.4) {
+        this.set_beta(2.0);
+      } else if (_alpha <= 1.8) {
+        this.set_beta(2.5);
+      } else {
+        this.set_beta(3.0);
+      }
+    else 
+      this.set_beta(newBeta);
 
-    if (_alpha < 1.25) {
-      _overlapFactor = _alpha + 0.1;
-    } else if (_alpha >= 1.25 && _alpha < 1.5) {
-      _overlapFactor = _alpha + 0.2;
-    } else if (_alpha >= 1.5 && _alpha < 1.8) {
-      _overlapFactor = _alpha + 0.6;
-    } else if (_alpha >= 1.8 && _alpha < 2) {
-      _overlapFactor = _alpha + 0.9;
-    } else if (_alpha >= 2 && _alpha < 2.5) {
-      _overlapFactor = _alpha + 2.2;
-    } else if (_alpha >= 2.5 && _alpha <= 3) {
-      _overlapFactor = _alpha + 2.2;
-    }
+    if (newOverlap == undefined)
+      if (_alpha < 1.25) {
+        _overlapFactor = _alpha + 0.15;
+      } else if (_alpha >= 1.25 && _alpha < 1.5) {
+        _overlapFactor = _alpha + 0.2;
+      } else if (_alpha >= 1.5 && _alpha < 1.8) {
+        _overlapFactor = _alpha + 0.6;
+      } else if (_alpha >= 1.8 && _alpha < 2) {
+        _overlapFactor = _alpha + 0.9;
+      } else if (_alpha >= 2 && _alpha < 2.5) {
+        _overlapFactor = _alpha + 2.2;
+      } else {
+        _overlapFactor = _alpha + 2.2;
+      }
+    else 
+      _overlapFactor = newOverlap;
 
     // Fixed analysis hop
     _RA = Math.round(_frameSize/_overlapFactor);
     _RS = Math.round(_alpha * _RA);
 
-    // console.log([newAlpha, _RS/_RA]);
+    console.log([newAlpha, _RS/_RA]);
 
     // Fixed synthesis hop
     // _RS = Math.round(_frameSize/_overlapFactor);

@@ -41,9 +41,11 @@
                       var bufR = buffer.getChannelData(1).subarray(position, position + FRAME_SIZE);
 
                       if (alpha) {
-                        olaL.set_alpha(alpha);
-                        olaR.set_alpha(alpha);
+                        olaL.set_alpha(alpha, overlap, beta);
+                        olaR.set_alpha(alpha, overlap, beta);
                         alpha = undefined;
+                        overlap = undefined;
+                        beta = undefined;
                       }
 
                       outBufferL = outBufferL.concat(olaL.process(bufL));
@@ -67,7 +69,9 @@
           request.send();
       };
 
-      loadSample('http://localhost/soundtouchjs/8.mp3');
+      // loadSample('http://localhost/soundtouchjs/1.mp3');
+      // loadSample('http://localhost/soundtouchjs/8.mp3');
+      loadSample('http://localhost/annotator/Daft%20Punk%20-%20Discography%20-%201994-2013/01%20-%20Albums%20(CD%20Original)/2001%20-%20Discovery%20-%20(320%20kbps)/14.%20Too%20Long.mp3');
 
       function set_beta(newBeta) {
         olaL.set_beta(newBeta);
@@ -81,6 +85,12 @@
 
       function set_alpha(newAlpha) {
         alpha = newAlpha;
+      }
+
+      function set(newAlpha, newOverlap, newBeta) {
+        alpha = newAlpha;
+        overlap = newOverlap;
+        beta = newBeta;
       }
 
     </script>
