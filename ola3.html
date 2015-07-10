@@ -10,6 +10,161 @@
     <script type="text/javascript" src="../bpm-timeline.js/formulas.js"></script>
     <script type="text/javascript" src="../bpm-timeline.js/bpm-timeline.js"></script>
     <script type="text/javascript" src="SegmentProcessorV3.js"></script>
-    
+    <script type="text/javascript">
+      var context = new AudioContext();
+      var BUFFER_SIZE = 2048;
+      var FRAME_SIZE  = 4096;
+      var node = context.createScriptProcessor(BUFFER_SIZE, 2);
+      var buffer;
+      var sp;
+      var data;
+
+      function download_json(url, success, error) {
+
+        var request = new XMLHttpRequest();
+        request.open('GET', url, true);
+
+        request.onload = function() {
+          if (request.status >= 200 && request.status < 400) {
+            var data = JSON.parse(request.responseText);
+            success(data);
+          } else {
+            error();
+          }
+        };
+
+        request.onerror = error;
+
+        request.send();
+
+      }
+
+      // params: {beatsSrc: URL, duration: Number | beats: Array, duration: Number | bpm: Number, firstBeat: Number, duration: Number}
+      function load_beats(params, callback) {
+        var P = params;
+        if (P.duration) {
+          if (P.beatsSrc)
+            download_json(P.beatsSrc, function(beats) {
+              callback(createBeatsArray1(beats, P.duration));
+            });
+          else if (P.beats)
+            callback(createBeatsArray1(P.beats, P.duration));
+          else if (P.bpm!=undefined && P.firstBeat!=undefined)
+            callback(createBeatsArray2(P.bpm, P.firstBeat, P.duration));
+          else
+            throw "Invalid parameters";
+        } else
+          throw "Invalid parameters";
+
+        function createBeatsArray1(beats, duration) {
+          var _beats = new Array(beats.length);
+          B = beats;
+          var star, end, beatPeriod, beatBPM;
+
+          for (var i=0; i < B.length-1 && B[i] < duration; i++) {
+            start = B[i];
+            end   = B[i+1];
+            beatPeriod = end - start;
+            beatBPM = 60 / beatPeriod;
+            _beats[i] = [start, beatBPM];
+          }
+
+          start = B[B.length-1];
+          end = start + beatPeriod;
+          if (end <= duration)
+            _beats[B.length-1] = [start, beatBPM];
+
+          return _beats;
+        }
+
+        function createBeatsArray2(bpm, firstBeat, duration) {
+          var beatPeriod = 60/bpm;
+
+          var beats = [];
+
+          for (var i=firstBeat || 0; i>0; i-=beatPeriod) {}
+
+          for (var t0=i; t0<duration; t0+=beatPeriod)
+            var t1 = t0 + beatPeriod;
+            if (t1<=duration)
+              beat[beats.length] = [t0, bpm];
+
+          return beats;
+        }
+      }
+
+      function parse_beats_json(obj) {
+
+        var arr = obj.beat[0].data;
+        var beats = new Array(arr.length);
+
+        for (var i=0; i < beats.length; i++) {
+          beats[i] = arr[i].time.value;
+        }
+
+        return beats;
+
+      }
+
+      loadSample = function(url, id) {
+          var request = new XMLHttpRequest();
+          request.open('GET', url, true);
+          request.responseType = 'arraybuffer';
+
+          request.onload = function() {
+              context.decodeAudioData(request.response, function(decodedData) {
+
+                  download_json(beatsSrc, function(beatsJSON) {
+
+                    var beats = parse_beats_json(beatsJSON);
+
+                    buffer = decodedData;
+
+                    load_beats({
+                      beats: beats, 
+                      duration: buffer.duration
+                    }, function(_data){
+
+                      data = _data;
+
+                      sp = new SegmentProcessorV3({initialBPM: 110});
+
+                      sp.add_audio_data({id: "a1", audioBuffer: buffer, beats: data});
+
+                      sp.add_interval({ audioId: "a1", tlStart: 0, segStart: 0, segDuration: 4, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 4, segStart: 0, segDuration: 4, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 8, segStart: 0, segDuration: 4, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 12, segStart: 0, segDuration: 2, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 14, segStart: 0, segDuration: 2, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 16, segStart: 0, segDuration: 1, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 18, segStart: 3, segDuration: 1, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 19, segStart: 2, segDuration: 1, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 21.5, segStart: 1, segDuration: 1, bpm: data[0][1]});
+
+
+                      node.onaudioprocess = function(e) {
+
+                        sp.process(e.outputBuffer);
+
+                      }
+
+                      node.connect(context.destination);
+
+                      console.log("decoded");
+
+                    });
+                  });
+
+              });
+          };
+          request.send();
+      };
+
+      var beatsSrc = "http://localhost/annotator/Daft%20Punk%20-%20Discography%20-%201994-2013/01%20-%20Albums%20(CD%20Original)/beats/14.%20Too%20Long.json";
+      var audioSrc = "http://localhost/annotator/Daft%20Punk%20-%20Discography%20-%201994-2013/01%20-%20Albums%20(CD%20Original)/2001%20-%20Discovery%20-%20(320%20kbps)/14.%20Too%20Long.mp3";
+
+      // loadSample('http://localhost/soundtouchjs/1.mp3');
+      loadSample(audioSrc);
+    </script>
   </body>
 </html>

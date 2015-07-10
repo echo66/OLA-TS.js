@@ -8,7 +8,9 @@ function OLATS(frameSize, windowType) {
 
     var delta = 0;
 
-    overlap_and_add(_RS + delta, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, output)
+    overlap_and_add(_RS + delta, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, output);
+
+    _clean = false;
 
     return output;
 
@@ -49,6 +51,7 @@ function OLATS(frameSize, windowType) {
     _midBuffer = new Float32Array(_frameSize);
     _overlapBuffers = create_constant_array(_frameSize, 0, Array);
     _owOverlapBuffers = create_constant_array(_frameSize, 0, Array);
+    _clean = true;
   }
 
 
@@ -101,7 +104,7 @@ function OLATS(frameSize, windowType) {
     _RA = Math.round(_frameSize/_overlapFactor);
     _RS = Math.round(_alpha * _RA);
 
-    console.log([newAlpha, _RS/_RA]);
+    // console.log([newAlpha, _RS/_RA]);
 
     // Fixed synthesis hop
     // _RS = Math.round(_frameSize/_overlapFactor);
@@ -186,5 +189,10 @@ function OLATS(frameSize, windowType) {
 
   var _overlapBuffers = create_constant_array(_frameSize, 0, Array);
   var _owOverlapBuffers = create_constant_array(_frameSize, 0, Array);
+
+
+  var _clean = true;
+
+  this.is_clean = function() { return _clean; }
 
 }

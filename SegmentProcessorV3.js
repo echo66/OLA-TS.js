@@ -3,14 +3,39 @@
  */
 function SegmentProcessorV3(params) {
 
-	var position = 0;
+	var position;
 	var midBufferL = [];
 	var midBufferR = [];
 	var FRAME_SIZE = params.frameSize || 4096;
 	var olaL = new OLATS(FRAME_SIZE);
 	var olaR = new OLATS(FRAME_SIZE);
-	var intervals  = [{ tlStart: 0, segStart: 0 }];
-	var currentInterval;
+
+	var intervals  = [{ tlStart: 0 }];
+
+	Object.defineProperties(intervals[0], {
+		"start": {
+			get: function() { return Math.round(bpmTimeline.time(this.tlStart) * 44100); }
+		},
+		"end": {
+			get: function() { 
+				if (this.segDuration != undefined)
+					return Math.round(bpmTimeline.time(this.tlStart + this.segDuration) * 44100); 
+				else
+					return undefined
+			}
+		},
+		"duration": {
+			get: function() { 
+				var end = this.end;
+				if (end != undefined)
+					return this.end - this.start; 
+				else
+					return Number.MAX_VALUE;
+			}
+		}
+	});
+
+	var currentInterval = 0;
 	var il = new Float32Array(FRAME_SIZE);
 	var ir = new Float32Array(FRAME_SIZE);
 	var zeros = new Float32Array(FRAME_SIZE * 3);
@@ -74,19 +99,20 @@ function SegmentProcessorV3(params) {
 				if (_position==undefined)
 					_position = intervals[i].start;
 
-				var buffer = audioData[intervals[i].audioId].buffer;
-
 				var incr = Math.min(FRAME_SIZE - inputSamplesCount, intervals[i].duration);
 
-				if (buffer) {
+				if (audioData[intervals[i].audioId]) {
+					var buffer = audioData[intervals[i].audioId].buffer;
 					il.set(buffer.getChannelData(0).subarray(_position, _position + incr), inputSamplesCount);
 					ir.set(buffer.getChannelData(1).subarray(_position, _position + incr), inputSamplesCount);
+					midAlpha += (incr/FRAME_SIZE) * (intervals[i].bpm / bpmTimeline.bpm_at_time(currentTime + incr));
 				} else {
 					il.set(zeros.subarray(0, incr), inputSamplesCount);
 					ir.set(zeros.subarray(0, incr), inputSamplesCount);
+					midAlpha += (incr/FRAME_SIZE) * 1
 				}
 
-				midAlpha += (incr/FRAME_SIZE) * (intervals[i].bpm / bpmTimeline.bpm_at_time(currentTime + incr));
+				
 
 				inputSamplesCount += incr;
 
@@ -106,8 +132,13 @@ function SegmentProcessorV3(params) {
 			olaL.set_alpha(alpha);
 			olaR.set_alpha(alpha);
 
-			midBufferL = midBufferL.concat(olaL.process(il));
-			midBufferR = midBufferR.concat(olaR.process(ir));
+			if (olaL.is_clean()) {
+				olaL.process(il);
+				olaR.process(ir);
+			} else {
+				midBufferL = midBufferL.concat(olaL.process(il));
+				midBufferR = midBufferR.concat(olaR.process(ir));
+			}
 
 			var hop = olaL.get_ra();
 
@@ -258,13 +289,13 @@ function SegmentProcessorV3(params) {
 
 					Object.defineProperties(obj, {
 						"start": {
-							get: function() { return audioData[this.audioId].beats[this.segStart][0]; }
+							get: function() { return Math.round(audioData[this.audioId].beats[this.segStart][0] * 44100); }
 						},
 						"end": {
-							get: function() { return audioData[this.audioId].beats[this.segStart + this.segDuration][1]; }
+							get: function() { return Math.round(audioData[this.audioId].beats[this.segStart + this.segDuration][0] * 44100); }
 						},
 						"duration": {
-							get: function() { return this.start() - this.end(); }
+							get: function() { return this.end - this.start; }
 						}
 					});
 
@@ -329,35 +360,49 @@ function SegmentProcessorV3(params) {
 
 		Object.defineProperties(obj0, {
 			"start": {
-				get: function() { return audioData[this.audioId].beats[this.segStart][0]; }
+				get: function() { 
+					return Math.round(audioData[this.audioId].beats[this.segStart][0] * 44100); 
+				}
 			},
 			"end": {
-				get: function() { return audioData[this.audioId].beats[this.segStart + this.segDuration][1]; }
+				get: function() { 
+					return Math.round(audioData[this.audioId].beats[this.segStart + this.segDuration][0] * 44100); 
+				}
 			},
 			"duration": {
-				get: function() { return this.start() - this.end(); }
+				get: function() { 
+					return this.end - this.start; 
+				}
 			}
 		});
 
 
 		if (I == undefined) {
 
-			intervals[i-1].segDuration = p.tlStart;
+			intervals[i-1].segDuration = p.tlStart - intervals[i-1].tlStart;
 
-			var obj1 = { 
-				tlStart		: p.tlStart + p.segDuration, 
-				segStart    : 0
-			};
+			var obj1 = { tlStart : p.tlStart + p.segDuration };
 
 			Object.defineProperties(obj1, {
 				"start": {
-					get: function() { return bpmTimeline.time(this.tlStart); }
+					get: function() { return Math.round(bpmTimeline.time(this.tlStart) * 44100); }
 				},
 				"end": {
-					get: function() { return bpmTimeline.time(this.tlStart + this.segDuration); }
+					get: function() { 
+						if (this.segDuration != undefined)
+							return Math.round(bpmTimeline.time(this.tlStart + this.segDuration) * 44100); 
+						else
+							return undefined
+					}
 				},
 				"duration": {
-					get: function() { return this.end() - this.start(); }
+					get: function() { 
+						var end = this.end;
+						if (end != undefined)
+							return this.end - this.start; 
+						else
+							return Number.MAX_VALUE;
+					}
 				}
 			});
 
@@ -398,7 +443,7 @@ function SegmentProcessorV3(params) {
 	 * params: {id, audioBuffer, beats} 
 	 * "audioBuffer" is an AudioBuffer. 
 	 * "beats" is an Array where each entry is another Array with the following data:
-	 * [TIME_START, TIME_END, BPM]
+	 * [TIME, BPM]
 	 */
 	this.add_audio_data = function(params) {
 		audioData[params.id] = {
