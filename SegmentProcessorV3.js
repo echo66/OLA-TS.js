@@ -56,8 +56,11 @@ function SegmentProcessorV3(params) {
 			}
 		}
 
-		if (currentInterval == undefined) 
+		if (currentInterval == undefined) {
 			currentInterval = intervals.length - 1;
+			position = 0;
+			return;
+		}
 
 		var b0 	 = intervals[currentInterval].segStart;
 		var tlt0 = intervals[currentInterval].tlStart;
