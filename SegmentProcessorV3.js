@@ -62,10 +62,20 @@ function SegmentProcessorV3(params) {
 		var b0 	 = intervals[currentInterval].segStart;
 		var tlt0 = intervals[currentInterval].tlStart;
 		var id 	 = intervals[currentInterval].audioId;
-		var t0 	 = audioData[id].beats[b0][0];
+		var t0 	 = Math.round(audioData[id].beats[b0][0] * 44100);
 
-		position = t0 + (currentTime - bpmTimeline.time(tlt0));
+		position = t0 + (currentTime - Math.round(bpmTimeline.time(tlt0) * 44100));
 
+	}
+
+	this.get_current_time = function(units) { 
+		if (units == undefined || units == "seconds") {
+			return currentTime / 44100;
+		} else if (units == "beats") {
+			return bpmTimeline.beat(currentTime / 44100);
+		} else {
+			throw "Unsupported time units";
+		}
 	}
 
 
@@ -474,7 +484,7 @@ function SegmentProcessorV3(params) {
 				}
 			}
 
-			this.set_current_time(bpmTimeline.beat(currentTime));c
+			this.set_current_time(bpmTimeline.beat(currentTime));
 
 		}
 		

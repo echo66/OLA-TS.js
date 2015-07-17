@@ -127,20 +127,15 @@
 
                       data = _data;
 
-                      sp = new SegmentProcessorV3({initialBPM: 110});
+                      sp = new SegmentProcessorV3({initialBPM: 130});
 
                       sp.add_audio_data({id: "a1", audioBuffer: buffer, beats: data});
 
                       sp.add_interval({ audioId: "a1", tlStart: 0, segStart: 0, segDuration: 4, bpm: data[0][1]});
                       sp.add_interval({ audioId: "a1", tlStart: 4, segStart: 0, segDuration: 4, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 8, segStart: 0, segDuration: 4, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 12, segStart: 0, segDuration: 2, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 14, segStart: 0, segDuration: 2, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 16, segStart: 0, segDuration: 1, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 18, segStart: 3, segDuration: 1, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 19, segStart: 2, segDuration: 1, bpm: data[0][1]});
-                      sp.add_interval({ audioId: "a1", tlStart: 21.5, segStart: 1, segDuration: 1, bpm: data[0][1]});
-
+                      sp.add_interval({ audioId: "a1", tlStart: 8, segStart: 15, segDuration: 4, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 12, segStart: 15, segDuration: 1, bpm: data[0][1]});
+                      sp.add_interval({ audioId: "a1", tlStart: 13, segStart: 15, segDuration: 1, bpm: data[0][1]});
 
                       node.onaudioprocess = function(e) {
 
