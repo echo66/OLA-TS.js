@@ -3,7 +3,7 @@ function OLATS(frameSize, windowType) {
   this.process = function(frame) {
 
     var input  = window_mul(frame);
-    
+
     var output = new Array(_RS);
 
     var delta = 0;
@@ -80,7 +80,7 @@ function OLATS(frameSize, windowType) {
       } else {
         this.set_beta(3.0);
       }
-    else 
+    else
       this.set_beta(newBeta);
 
     if (newOverlap == undefined)
@@ -97,7 +97,7 @@ function OLATS(frameSize, windowType) {
       } else {
         _overlapFactor = _alpha + 2.2;
       }
-    else 
+    else
       _overlapFactor = newOverlap;
 
     // Fixed analysis hop
@@ -117,9 +117,9 @@ function OLATS(frameSize, windowType) {
     _window = create_window(_frameSize, _beta, _windowType);
 
     _squaredFramingWindow = new Float32Array(_window.length);
-    for (var i=0; i<_squaredFramingWindow.length; i++) 
+    for (var i=0; i<_squaredFramingWindow.length; i++)
       _squaredFramingWindow[i] = Math.pow(_window[i], 1);
-    
+
   }
 
   this.set_overlap = function(newOverlap) {
@@ -165,10 +165,64 @@ function OLATS(frameSize, windowType) {
     Lanczos : function(length, index, beta) {
       var x = 2 * index / (length - 1) - 1;
       return Math.pow(Math.sin(Math.PI * x) / (Math.PI * x), beta);
-    }, 
+    },
 
     Triangular : function(length, index, beta) {
       return Math.pow(2 / length * (length / 2 - Math.abs(index - (length - 1) / 2)), beta);
+    },
+
+    Bartlett : function(length, index, beta) {
+      return Math.pow(2 / (length - 1) * ((length - 1) / 2 - Math.abs(index - (length - 1) / 2)), beta);
+    },
+
+    BartlettHann : function(length, index, beta) {
+      return Math.pow(0.62 - 0.48 * Math.abs(index / (length - 1) - 0.5) - 0.38 * Math.cos(2 * Math.PI * index / (length - 1)), beta);
+    },
+
+    Blackman : function(length, index, alpha) {
+      var a0 = (1 - alpha) / 2;
+      var a1 = 0.5;
+      var a2 = alpha / 2;
+
+      return a0 - a1 * Math.cos(2 * Math.PI * index / (length - 1)) + a2 * Math.cos(4 * Math.PI * index / (length - 1));
+    },
+
+    Cosine : function(length, index, beta) {
+      return Math.pow(Math.cos(Math.PI * index / (length - 1) - Math.PI / 2), beta);
+    },
+
+    Gauss : function(length, index, alpha) {
+      return Math.pow(Math.E, -0.5 * Math.pow((index - (length - 1) / 2) / (alpha * (length - 1) / 2), 2));
+    },
+
+    Hamming : function(length, index, beta) {
+      return Math.pow(0.54 - 0.46 * Math.cos(2 * Math.PI * index / (length - 1)), beta);
+    },
+
+    Hann : function(length, index, beta) {
+      return Math.pow(0.5 * (1 - Math.cos(2 * Math.PI * index / (length - 1))), beta);
+    },
+
+    Rectangular : function(length, index, beta) {
+      return beta;
+    },
+
+    SinBeta : function(length, index, beta) {
+      return Math.pow(Math.sin(Math.PI*index/length), beta);
+    },
+
+    Trapezoidal: function(length, index, beta) {
+    	var div = 10;
+    	var topIdx = Math.round(length / 4);
+    	var i1 = topIdx - 1;
+    	var i2 = topIdx * (div - 1) - 1;
+    	if (index <= i1) {
+    		return Math.pow(index / i1, beta);
+    	} else if (index >= i2) {
+    		return Math.pow(i2 / index, beta);
+    	} else {
+    		return 1;
+    	}
     }
   };
 
@@ -184,7 +238,7 @@ function OLATS(frameSize, windowType) {
   this.set_alpha(1);
 
   var _midBuffer = new Float32Array(_frameSize);
-  
+
   this.set_beta(_beta);
 
   var _overlapBuffers = create_constant_array(_frameSize, 0, Array);

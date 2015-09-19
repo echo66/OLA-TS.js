@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <script type="text/javascript" src="OLA.js"></script>
+    <script type="text/javascript" src="../bpm-timeline.js/bpm-timeline.js"></script>
+    <script type="text/javascript" src="SegmentsSequencer.js"></script>
+    <script type="text/javascript">
+      var bpmTimeline = new BPMTimeline(120);
+      var ss = new SegmentsSequencer({sampleRate: 44100, frameSize: 4096, bpmTimeline: bpmTimeline});
+    </script>
+  </body>
+</html>
