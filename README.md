@@ -1,5 +1,7 @@
 # OLA-TS.js
 
+OLA-TS.js is an audio time stretching implementation of a modified Overlap and Add (OLA) algorithm.
+
 # API
 
 process(Array | Typed Array): TODO
