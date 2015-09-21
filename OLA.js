@@ -1,34 +1,34 @@
 function OLATS(frameSize, windowType) {
 
-  this.process = function(frame) {
+  this.process = function(frame, outputArray) {
 
     var input  = window_mul(frame);
 
-    var output = new Array(_RS);
-
-    var delta = 0;
-
-    overlap_and_add(_RS + delta, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, output);
+    overlap_and_add(_RS, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, outputArray);
 
     _clean = false;
 
-    return output;
+    return _RS;
 
   }
 
   function overlap_and_add(RS, inF, squaredWinF, oBuf, owOBuf, windowSize, outF) {
 
-    var owSample = 0;
+    var owSample, oSample = 0;
 
     for (var i = 0; i < RS; i++) {
       owSample = owOBuf.shift() || 0;
-      outF[i] = oBuf.shift() / ((owSample<10e-3)? 1 : owSample);
-      oBuf[oBuf.length] = owOBuf[owOBuf.length] = 0;
+      oSample  = oBuf.shift() || 0;
+      outF.push(oSample / ((owSample<10e-3)? 1 : owSample));
+      oBuf.push(0);
+      owOBuf.push(0);
     }
 
     for (var i = 0; i < windowSize; i++) {
-      oBuf[oBuf.length-1] = inF[i] + oBuf.shift();
-      owOBuf[owOBuf.length-1] = squaredWinF[i] + owOBuf.shift();
+      oSample = oBuf.shift();
+      oBuf.push(inF[i] + oSample);
+      owSample = owOBuf.shift();
+      owOBuf.push(squaredWinF[i] + owSample);
     }
 
   }
@@ -48,9 +48,8 @@ function OLATS(frameSize, windowType) {
   this.get_overlap_factor = function() { return _overlapFactor; }
 
   this.clear_buffers = function() {
-    _midBuffer = new Float32Array(_frameSize);
-    _overlapBuffers = create_constant_array(_frameSize, 0, Array);
-    _owOverlapBuffers = create_constant_array(_frameSize, 0, Array);
+    _overlapBuffers = new CBuffer(_frameSize);
+    _owOverlapBuffers = new CBuffer(_frameSize);
     _clean = true;
   }
 
@@ -60,6 +59,10 @@ function OLATS(frameSize, windowType) {
    *    Setters
    * --------------
    */
+
+  this.set_window_type = function(newType) {
+    _windowType = (WindowFunctions[newType])? newType : _windowType;
+  }
 
   this.set_overlap = function(newOverlap) {
     _overlapFactor = newOverlap;
@@ -212,17 +215,17 @@ function OLATS(frameSize, windowType) {
     },
 
     Trapezoidal: function(length, index, beta) {
-    	var div = 10;
-    	var topIdx = Math.round(length / 4);
-    	var i1 = topIdx - 1;
-    	var i2 = topIdx * (div - 1) - 1;
-    	if (index <= i1) {
-    		return Math.pow(index / i1, beta);
-    	} else if (index >= i2) {
-    		return Math.pow(i2 / index, beta);
-    	} else {
-    		return 1;
-    	}
+      var div = 10;
+      var topIdx = Math.round(length / 4);
+      var i1 = topIdx - 1;
+      var i2 = topIdx * (div - 1) - 1;
+      if (index <= i1) {
+        return Math.pow(index / i1, beta);
+      } else if (index >= i2) {
+        return Math.pow(i2 / index, beta);
+      } else {
+        return 1;
+      }
     }
   };
 
@@ -237,12 +240,14 @@ function OLATS(frameSize, windowType) {
 
   this.set_alpha(1);
 
-  var _midBuffer = new Float32Array(_frameSize);
-
   this.set_beta(_beta);
 
-  var _overlapBuffers = create_constant_array(_frameSize, 0, Array);
-  var _owOverlapBuffers = create_constant_array(_frameSize, 0, Array);
+  var _overlapBuffers = new CBuffer(_frameSize);
+  var _owOverlapBuffers = new CBuffer(_frameSize);
+  for (var i=0; i<_frameSize; i++) {
+    _overlapBuffers.push(0);
+    _owOverlapBuffers.push(0);
+  }
 
 
   var _clean = true;
