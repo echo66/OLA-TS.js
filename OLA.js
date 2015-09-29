@@ -4,14 +4,17 @@ function OLATS(frameSize, windowType) {
 
     var input  = window_mul(frame);
 
-    overlap_and_add(_RS, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, outputArray);
+    overlap_and_add(_Hs, input, _squaredFramingWindow, _overlapBuffers, _owOverlapBuffers, _frameSize, outputArray);
 
     _clean = false;
 
-    return _RS;
+    return _Hs;
 
   }
 
+  /*
+   *  Overlap & Add with CBuffer.
+   */
   function overlap_and_add(RS, inF, squaredWinF, oBuf, owOBuf, windowSize, outF) {
 
     var owSample, oSample = 0;
@@ -33,17 +36,49 @@ function OLATS(frameSize, windowType) {
 
   }
 
+  this.beta_fn = function(alpha) {
+    if (_alpha <= 1) {
+        return 2.0;
+      } else if (_alpha <= 1.2) {
+        return 2.0;
+      } else if (_alpha <= 1.4) {
+        return 2.0;
+      } else if (_alpha <= 1.8) {
+        return 2.5;
+      } else {
+        return 3.0;
+      }
+  }
+
+  this.overlap_fn = function(alpha) {
+    if (alpha < 1.25) {
+      return alpha + 0.15;
+    } else if (alpha >= 1.25 && alpha < 1.5) {
+      return alpha + 0.2;
+    } else if (alpha >= 1.5 && alpha < 1.8) {
+      return alpha + 0.6;
+    } else if (alpha >= 1.8 && alpha < 2) {
+      return alpha + 0.9;
+    } else if (alpha >= 2 && alpha < 2.5) {
+      return alpha + 2.2;
+    } else {
+      return alpha + 2.2;
+    }
+  }
+
   /*
    * --------------
    *    Getters
    * --------------
    */
 
-  this.get_rs = function () { return _RS; }
+  this.get_hs = function () { return _Hs; }
 
-  this.get_ra = function () { return _RA; }
+  this.get_ha = function () { return _Ha; }
 
   this.get_alpha = function() { return _alpha; }
+
+  this.get_real_alpha = function() { return _Hs / _Ha; }
 
   this.get_overlap_factor = function() { return _overlapFactor; }
 
@@ -64,55 +99,31 @@ function OLATS(frameSize, windowType) {
     _windowType = (WindowFunctions[newType])? newType : _windowType;
   }
 
-  this.set_overlap = function(newOverlap) {
-    _overlapFactor = newOverlap;
-  }
-
   this.set_alpha = function(newAlpha, newOverlap, newBeta) {
     _alpha = newAlpha;
 
     if (newBeta == undefined)
-      if (_alpha <= 1) {
-        this.set_beta(2);
-      } else if (_alpha <= 1.2) {
-        this.set_beta(2.0)
-      } else if (_alpha <= 1.4) {
-        this.set_beta(2.0);
-      } else if (_alpha <= 1.8) {
-        this.set_beta(2.5);
-      } else {
-        this.set_beta(3.0);
-      }
+      this.set_beta(this.beta_fn(_alpha));
     else
       this.set_beta(newBeta);
 
     if (newOverlap == undefined)
-      if (_alpha < 1.25) {
-        _overlapFactor = _alpha + 0.15;
-      } else if (_alpha >= 1.25 && _alpha < 1.5) {
-        _overlapFactor = _alpha + 0.2;
-      } else if (_alpha >= 1.5 && _alpha < 1.8) {
-        _overlapFactor = _alpha + 0.6;
-      } else if (_alpha >= 1.8 && _alpha < 2) {
-        _overlapFactor = _alpha + 0.9;
-      } else if (_alpha >= 2 && _alpha < 2.5) {
-        _overlapFactor = _alpha + 2.2;
-      } else {
-        _overlapFactor = _alpha + 2.2;
-      }
+      _overlapFactor = this.overlap_fn(_alpha);
     else
       _overlapFactor = newOverlap;
 
-    // Fixed analysis hop
-    _RA = Math.round(_frameSize/_overlapFactor);
-    _RS = Math.round(_alpha * _RA);
+    // "Fixed" analysis hop
+    _Ha = Math.round(_frameSize/_overlapFactor);
+    _Hs = Math.round(_alpha * _Ha);
 
-    // console.log([newAlpha, _RS/_RA]);
+    // console.log([newAlpha, _Hs/_Ha]);
 
-    // Fixed synthesis hop
-    // _RS = Math.round(_frameSize/_overlapFactor);
-    // _RA = Math.round(_RS / _alpha);
+    // "Fixed" synthesis hop
+    // _Hs = Math.round(_frameSize/_overlapFactor);
+    // _Ha = Math.round(_Hs / _alpha);
   }
+
+  
 
   this.set_beta = function(newBeta) {
     _beta = newBeta;
@@ -123,10 +134,6 @@ function OLATS(frameSize, windowType) {
     for (var i=0; i<_squaredFramingWindow.length; i++)
       _squaredFramingWindow[i] = Math.pow(_window[i], 1);
 
-  }
-
-  this.set_overlap = function(newOverlap) {
-    _overlapFactor = newOverlap;
   }
 
 
@@ -231,7 +238,7 @@ function OLATS(frameSize, windowType) {
 
 
   var _frameSize = frameSize;
-  var _alpha, _RA, _RS;
+  var _alpha, _Ha, _Hs;
   var _beta = 1;
   var _overlapFactor = 1.1;
   var _windowType = "Lanczos";
