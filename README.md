@@ -1,6 +1,7 @@
 # OLA-TS.js
 
 OLA-TS.js is an audio time stretching implementation of a modified Overlap and Add (OLA) algorithm.
+Demo: http://echo66.github.io/demos/OLA-TS.js/
 
 # Constructor
 
@@ -12,7 +13,7 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 *clear_buffers()*: clears all internal buffers, like the overlapping buffer. This can be useful for audio players that need to create a noticeable stop in the transition to the next file in a playlist, in order to avoid using the phase of the previous song to adjust the phase of the next song.
 
-*set_alpha(Number alpha, Number overlap, Number beta)*: defines the stretching factor and, optionally, the overlapping factor and window exponent. TODO
+*set_alpha(Number alpha, Number overlap, Number beta)*: given the new stretching factor, it computes the new values for Hs , Ha (both integers) and invokes the function pointed by *overlap_fn*.
 
 *set_window_type(String windowType)*: changes the type of the window used within OLA. Available types are Lanczos, Triangular, Bartlett, BartlettHann, Blackman, Cosine, Gauss, Hamming, Hann, Rectangular, SinBeta.
 
