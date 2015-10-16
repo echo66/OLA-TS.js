@@ -6,14 +6,6 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 *OLATS(Number frameSize)*: frameSize must be an integer. The default window type is the Lanczos.
 
-# (Relevant) Private fields
-
-*_overlapBuffer*: TODO
-
-*_owOverlapBuffer*: TODO
-
-*_squaredFramingWindow*: TODO
-
 # API
 
 *process(Array inputFrame, CBuffer outputFrame): given a (mono) frame, performs a time stretching iteration and pushes H s samples in the output CBuffer.
@@ -34,13 +26,17 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 *get_hs()*: returns the current synthesis hop size. This function calculates the increment to the output signal position which an be used to guide the cursor in the UI of an audio player using OLA-TS.js as time stretcher.
 
-*get_overlap_factor()*: Return the overlapping factor.
+*get_overlap_factor()*: returns the current overlapping factor.
 
-*get_beta()*: TODO
+*get_beta()*: returns the current window exponent.
+
 
 # Helpers
 
-TODO
+*BufferedOLA*: TODO
+
+*WAAPlayer*: TODO
+
 
 # Notes
 
@@ -48,7 +44,6 @@ TODO
 
 * This time stretcher is recommended for applications that need a cheap solution for time stretching while maintaining good quality for harmonic structures and do not require very fast manipulation of the time stretch factor.
 
-This 
 
 # Roadmap
 
