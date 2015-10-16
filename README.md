@@ -42,10 +42,14 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 TODO
 
-# NOTES
+# Notes
 
-Audio quality, in OLA-TS.js, is strongly dependent on (1) frame size and (2) the overlapping factor. For small frame sizes (=< 2048) and songs with harmonic structures like voices, there will be modulation in the output.
+* Audio quality, in OLA-TS.js, is strongly dependent on (1) frame size and (2) the overlapping factor. For small frame sizes (=< 2048) and songs with harmonic structures like voices, there will be modulation in the output, which can be minimized with careful management of the overlapping factor (overlap_fn) and window exponent (beta_fn). For large frame sizes (>= 4096), the modulation becomes less perceivable. 
 
-# Note
+* This time stretcher is recommended for applications that need a cheap solution for time stretching while maintaining good quality for harmonic structures and do not require very fast manipulation of the time stretch factor.
 
-I'm still trying to understand why this works so "well" for 4096 samples. In fact, I developed this as the result of making a mistake with the basic Overlap and Add algorithm.
+This 
+
+# Roadmap
+
+* Formal analysis of the algorithm.
