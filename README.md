@@ -6,27 +6,41 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 *OLATS(Number frameSize)*: frameSize must be an integer. The default window type is the Lanczos.
 
+# (Relevant) Private fields
+
+*_overlapBuffer*: TODO
+
+*_owOverlapBuffer*: TODO
+
+*_squaredFramingWindow*: TODO
+
 # API
 
-*process(TypedArray inputArray, CBuffer outputArray)*: executes the time stretching of inputArray with the current parameters (use *set_alpha* to configure them). The inputArray will be overlapped with an intermediary buffer and the first 
+*process(Array inputFrame, CBuffer outputFrame): given a (mono) frame, performs a time stretching iteration and pushes H s samples in the output CBuffer.
 
-*clear_buffers()*: TODO. Useful when you need to use a different audio buffer as the source of input frames.
+*clear_buffers()*: clears all internal buffers, like the overlapping buffer. This can be useful for audio players that need to create a noticeable stop in the transition to the next file in a playlist, in order to avoid using the phase of the previous song to adjust the phase of the next song.
 
 *set_alpha(Number alpha, Number overlap, Number beta)*: defines the stretching factor and, optionally, the overlapping factor and window exponent. TODO
 
 *set_window_type(String windowType)*: changes the type of the window used within OLA. Available types are Lanczos, Triangular, Bartlett, BartlettHann, Blackman, Cosine, Gauss, Hamming, Hann, Rectangular, SinBeta.
 
-*get_alpha()*: TODO
+*beta_fn(Number alpha)*: TODO
 
-*get_ra()*: Return the analysis hop size.
+*overlap_fn(Number alpha)*: a public field pointing to a function that, given a stretching factor α, will return a new overlapping factor.
 
-*get_rs()*: Return the synthesis hop size.
+*get_alpha()*: returns the last specified stretching factor.
+
+*get_ha()*: returns the current analysis hop size. This function calculates the increment to the “read head” of the input signal, when playing an audio file.
+
+*get_hs()*: returns the current synthesis hop size. This function calculates the increment to the output signal position which an be used to guide the cursor in the UI of an audio player using OLA-TS.js as time stretcher.
 
 *get_overlap_factor()*: Return the overlapping factor.
 
 *get_beta()*: TODO
 
+# Helpers
 
+TODO
 
 # Note
 
