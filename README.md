@@ -24,9 +24,9 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 
 *set_window_type(String windowType)*: changes the type of the window used within OLA. Available types are Lanczos, Triangular, Bartlett, BartlettHann, Blackman, Cosine, Gauss, Hamming, Hann, Rectangular, SinBeta.
 
-*beta_fn(Number alpha)*: TODO
+*beta_fn(Number alpha)*: public field pointing to a function that, given a stretching factor α, will return a new window exponent.
 
-*overlap_fn(Number alpha)*: a public field pointing to a function that, given a stretching factor α, will return a new overlapping factor.
+*overlap_fn(Number alpha)*: public field pointing to a function that, given a stretching factor α, will return a new overlapping factor.
 
 *get_alpha()*: returns the last specified stretching factor.
 
@@ -41,6 +41,10 @@ OLA-TS.js is an audio time stretching implementation of a modified Overlap and A
 # Helpers
 
 TODO
+
+# NOTES
+
+Audio quality, in OLA-TS.js, is strongly dependent on (1) frame size and (2) the overlapping factor. For small frame sizes (=< 2048) and songs with harmonic structures like voices, there will be modulation in the output.
 
 # Note
 
