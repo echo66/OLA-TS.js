@@ -9,7 +9,7 @@ Demo: http://echo66.github.io/demos/OLA-TS.js/
 
 # API
 
-*process(Array inputFrame, CBuffer outputFrame): given a (mono) frame, performs a time stretching iteration and pushes H s samples in the output CBuffer.
+*process(Array inputFrame, CBuffer outputFrame)*: given a (mono) frame, performs a time stretching iteration and pushes H s samples in the output CBuffer.
 
 *clear_buffers()*: clears all internal buffers, like the overlapping buffer. This can be useful for audio players that need to create a noticeable stop in the transition to the next file in a playlist, in order to avoid using the phase of the previous song to adjust the phase of the next song.
 
@@ -34,11 +34,11 @@ Demo: http://echo66.github.io/demos/OLA-TS.js/
 
 # Helpers
 
-*BufferedTS*: it manages the intermediary frame buffering. This class offers two public writable fields, *alpha* and *position* to manipulate the stretching factor and the 'read head' of the input audio buffer, as well as two public methods:
+*BufferedTS*: it manages the intermediary frame buffering for two OLATS instances. This class offers two public writable fields, *alpha* and *position* to manipulate the stretching factor and the 'read head' of the input audio buffer, as well as two public methods:
 * *process(AudioBuffer outputAudioBuffer)*: writes the next output frame in the provided output audio buffer.
 * *set_audio_buffer(AudioBuffer newBuffer)*: defines the input audio buffer.
 
-*WAAPlayer*: TODO
+*WAAPlayer*: integrates a *BufferedTS* instance in a ScriptProcessor node, providing the usual functions *connect(AudioNode)* and *disconnect(AudioNode)*, two extra public methods, *play* and *stop*, as well as four public writable fields: position, speed, audioContext and audioBuffer.
 
 
 # Notes
