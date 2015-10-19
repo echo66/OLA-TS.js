@@ -34,7 +34,9 @@ Demo: http://echo66.github.io/demos/OLA-TS.js/
 
 # Helpers
 
-*BufferedOLA*: TODO
+*BufferedTS*: it manages the intermediary frame buffering. This class offers two public writable fields, *alpha* and *position* to manipulate the stretching factor and the 'read head' of the input audio buffer, as well as two public methods:
+* *process(AudioBuffer outputAudioBuffer)*: writes the next output frame in the provided output audio buffer.
+* *set_audio_buffer(AudioBuffer newBuffer)*: defines the input audio buffer.
 
 *WAAPlayer*: TODO
 
