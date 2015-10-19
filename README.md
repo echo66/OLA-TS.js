@@ -38,7 +38,7 @@ Demo: http://echo66.github.io/demos/OLA-TS.js/
 * *process(AudioBuffer outputAudioBuffer)*: writes the next output frame in the provided output audio buffer.
 * *set_audio_buffer(AudioBuffer newBuffer)*: defines the input audio buffer.
 
-*WAAPlayer*: integrates a *BufferedTS* instance in a ScriptProcessor node, providing the usual functions *connect(AudioNode)* and *disconnect(AudioNode)*, two extra public methods, *play* and *stop*, as well as four public writable fields: position, speed, audioContext and audioBuffer.
+*WAAPlayer*: integrates a *BufferedTS* instance in a ScriptProcessor node, providing the usual functions *connect(AudioNode)* and *disconnect(AudioNode)*, two extra public methods, *play* and *stop*, as well as four public writable fields: *position*, *speed*, *audioContext* and *audioBuffer*.
 
 
 # Notes
