@@ -1,4 +1,5 @@
 function SegmentsSequencer(params) {
+
 	var innerSegmentCursor = 0;
 	var midBufferL = [];
 	var midBufferR = [];
@@ -31,7 +32,14 @@ function SegmentsSequencer(params) {
 			currentTime = Math.round(newTime * sampleRate);
 			newTime = bpmTimeline.beat(newTime);
 		} else {
-			// TODO: LANÇAR EXCEPÇÃO
+			
+			throw {
+				message: "Invalid units", 
+				invalidValues: {
+					units: units
+				}
+			};
+
 		}
 
 		idx = find_index(segments, {startBeat: newTime}, function(a,b) { return a.startBeat - b.startBeat; });
@@ -53,7 +61,14 @@ function SegmentsSequencer(params) {
 		} else if (units == "beats") {
 			return bpmTimeline.beat(currentTime / sampleRate);
 		} else {
-			// TODO: LANÇAR EXCEPÇÃO
+			
+			throw {
+				message: "Invalid units", 
+				invalidValues: {
+					units: units
+				}
+			};
+
 		}
 	}
 
@@ -174,129 +189,105 @@ function SegmentsSequencer(params) {
 
 	// params: {id} || {startTime, endTime, units}
 	this.remove_segments = function(params) {
-		if (params.id != undefined) {
-			// TODO
+		
+		var startBeat, endBeat;
+
+		if (params.units == "beats") {
+			startBeat = params.startTime;
+			endBeat = params.endTime;
+		} else if (params.units == "seconds") {
+			startBeat = bpmTimeline.beat(params.startTime);
+			endBeat = bpmTimeline.beat(params.endTime);
 		} else {
-			var startBeat, endBeat;
+			
+			throw {
+				message: "Invalid units", 
+				invalidValues: {
+					units: params.units
+				}
+			};
 
-			if (units == "beats") {
-				startBeat = startTime;
-				endBeat = endTime;
-			} else if (units == "seconds") {
-				startBeat = bpmTimeline.beat(startTime);
-				endBeat = bpmTimeline.beat(endTime);
-			} else {
-				// TODO: LANÇAR EXCEPÇÃO
-			}
-
-			_add_segment(undefined, undefined, undefined, startBeat, endBeat, undefined, undefined);
 		}
+
+		_remove_segments(startBeat, endBeat);
+	}
+
+	function _remove_segments(startBeat, endBeat) {
+		_add_segment({startBeat: startBeat, endBeat: endBeat});
 	}
 
 	// TODO: permitir segmentos com sub-segmentos (i.e.: batidas dos segmentos)
 	this.add_segment = function(id, audioId, bufferStart, bufferEnd, startBeat, endBeat, bpm) {
-		_add_segment(audioId, bufferStart, bufferEnd, startBeat, endBeat, bpm, id);
-	}
-
-	function _add_segment(audioId, bufferStart, bufferEnd, startBeat, endBeat, bpm, id) {
 		if (!audioBuffers[audioId]) {
-			// TODO: CRIAR EXCEPÇÕES
+			throw {
+				message: "Invalid audio identifier", 
+				invalidValues: {
+					audioId: audioId
+				}
+			};
 		}
 
-		var newSegment = { 
-			audioId : audioId, 
-			bufferStart : bufferStart, 
-			bufferEnd : bufferEnd, 
-			startBeat : startBeat, 
-			endBeat : endBeat, 
-			bpm : bpm, 
-			id : id
-		};
+		_add_segment({
+			audioId : audioId, id : id, 
+			bufferStart : bufferStart, bufferEnd  : bufferEnd, 
+			startBeat : startBeat, endBeat : endBeat
+		});
+	}
 
-		var idx = find_index(segments, {startBeat: startBeat}, function(a, b) { return a.startBeat - b.startBeat; });
+	function _add_segment(newSegment) {
+
+		var idx = find_index(segments, {startBeat: newSegment.startBeat}, function(a, b) { return a.startBeat - b.startBeat; });
 
 		if (idx.length == 1) {
 
 			idx = idx[0];
 
-			if (segments[idx].startBeat < startBeat) {
-				/*
-				 *	ADDING THE NEW SEGMENT AS THE THE LAST ONE. 
-				 *  AS SUCH, WE NEED TO ADD A SILENCE SEGMENT 
-				 * AFTER THE NEW SEGMENT.
-				 */
-				segments[segments.length-1].endBeat = startBeat;
-				segments[segments.length] = newStartBeatgment;
-				segments[segments.length] = {startBeat: endBeat, endBeat: Number.MAX_VALUE};
-				return;
+			if (idx != segments.length-1) {
+				// INÍCIO DE OUTRO SEGMENTO OU PRIMEIRO
+				override_segments(segments, newSegment, idx);
+			} else {
+				// ÚLTIMO SEGMENTO
+				if (idx == segments.length-1) {
+					change_end(segments[idx], newSegment);
+
+					if (segments[idx].startBeat == newSegment.startBeat) 
+						segments[idx] = newSegment;
+					else 
+						segments[idx+1] = newSegment;
+					
+					segments[segments.length] = {startBeat: newSegment.endBeat, endBeat: Number.MAX_VALUE};
+				}
 			}
 
-			if (segments[idx].endBeat < endBeat) {
-				/*
-				 * DELETE ALL SEGMENTS FOR WHICH 
-				 * newSegment.endBeat >= segment.endBeat.
-				 * FOR THE LAST SEGMENT, THE ONE BEING OVERLAPPED 
-				 * (newSegment.endBeat < segment.endBeat), CHANGE THE startBeat AND 
-				 * bufferStart VALUES.
-				 */
-				for (var i=idx+1; i<segments.length; i++) {
-					if (segments[i].endBeat > newSegment.endBeat) {
-						change_start(segments[idx], newSegment);
-						break;
-					} 
-				}
-				segments.splice(idx, i-idx, newSegment);
-			} else if (segments[idx].endBeat == endBeat) {
-				/* ESCREVE POR CIMA */
-				segments[idx] = newSegment;
-			} else if (segments[idx].endBeat > endBeat) {
-				/* ALTERA O TAMANHO DO ANTIGO E INSERE O NOVO ANTES DO ANTIGO */
-				change_start(segments[idx], newSegment);
-				segments.splice(idx, 0, newSegment);
-			}
+			joined_silent_neighbours(segments, (idx-1 < 0)? undefined: idx-1, idx, idx+1);
+
 
 		} else {
 
 			var pIdx = idx[0];
 			var nIdx = idx[1];
 
-			if (segments[pIdx].endBeat > startBeat) {
-				/*
-				 *	SE O FINAL DO SEG. ANTERIOR FÔR APÓS O FINAL DO NOVO,
-				 */
-				if (segments[pIdx].endBeat > endBeat) {
-					var copy = copy_segment(segments[pIdx]);
-					change_end(copy, newSegment);
-					change_start(segments[pIdx], newSegment);
-					segments.splice(pIdx, 0, copy); 
-					segments.splice(pIdx+1, 0, newSegment);
-					return;
-				} else {
-					change_end(segments[pIdx], newSegment);
-				}
+			// SOBREPÕEM-SE A DOIS (OU MAIS) SEGMENTOS
+			if (newSegment.endBeat < segments[pIdx].endBeat) {
+				var copy = copy_segment(segments[pIdx]);
+				change_end(segments[pIdx], newSegment);
+				change_start(copy, newSegment);
+				segments.splice(pIdx+1, 0, copy);
+				segments.splice(pIdx+1, 0, newSegment);
+				joined_silent_neighbours(segments, pIdx, pIdx+1, pIdx+2);
+				return;
 			}
-
-			if (segments[nIdx].startBeat < endBeat) {
-				for (var i=nIdx; i<segments.length; i++) {
-					if (segments[i].endBeat > newSegment.endBeat) {
-						change_start(segments[i], newSegment);
-						break;
-					} 
-				}
-				segments.splice(nIdx, i-nIdx, newSegment);
-			} else if (segments[nIdx].startBeat > endBeat) {
-				if (audioId != undefined) {
-					segments.splice(nIdx++, 0, newSegment);
-					segments.splice(nIdx, 0, { startBeat: segments[nIdx].endBeat, endBeat: startBeat });
-				} else {
-					/* 
-					 *	SE FÔR UM SEGMENTO SILENCIOSO, cria 
-					 */
-					newSegment.startBeat = segments[nIdx].endBeat;
-					segments.splice(nIdx, 0, newSegment);
-				}
-			} else {
-				segments.splice(nIdx, 0, newSegment);
+			if (newSegment.endBeat == segments[pIdx].endBeat) {
+				change_end(segments[pIdx], newSegment);
+				segments.splice(pIdx+1, 0, newSegment);
+				joined_silent_neighbours(segments, pIdx, pIdx+1, pIdx+2);
+				return;
+			}
+			if (newSegment.endBeat > segments[pIdx].endBeat) {
+				change_end(segments[pIdx], newSegment);
+				override_segments(segments, newSegment, nIdx);
+				joined_silent_neighbours(segments, pIdx, pIdx+1, pIdx+2);
+				return;
 			}
 
 		}
@@ -306,27 +297,54 @@ function SegmentsSequencer(params) {
 		audioBuffers[id] = { buffer: audioBuffer };
 	}
 
-	this.remove_audio_buffer = function(id) {
-		if (audioBuffers[id]) {
+	this.remove_audio_buffer = function(aid) {
+		if (audioBuffers[aid]) {
 
-			delete audioBuffers[id];
+			delete audioBuffers[aid];
 
-			var _segments = this.get_segments();
+			var segmentsToRemove = [];
 
-			segments = new Array({ startBeat: 0 });
-
-			for (var i=0; i<_segments.length; i++) {
-				var S = _segments[i];
-				if (S.audioId != undefined && S.audioId != id) {
-					_add_segment(S.audioId, S.bufferStart, S.bufferEnd, S.startBeat, S.endBeat, S.bpm, S.id);
+			for (var i=0; i<segments.length; i++) {
+				if (segments[i].audioId == aid) {
+					segmentsToRemove[segmentsToRemove.length] = {
+						startBeat : segments[i].startBeat, 
+						endBeat : segments[i].endBeat
+					};
 				}
 			}
 
-			this.set_current_time(bpmTimeline.beat(currentTime));
+			for (var i=0; i<segmentsToRemove.length; i++) {
+				_remove_segments(segmentsToRemove[i].startBeat, segmentsToRemove[i].endBeat);
+			}
 
 		} else {
-			// TODO: CRIAR EXCEPÇÕES
+
+			throw {
+				message: "Invalid audio identifier", 
+				invalidValues: {
+					audioId: audioId
+				}
+			};
+
 		}
+	}
+
+
+
+
+	/***************************************************************/
+	/********************** HELPER FUNCTIONS ***********************/
+	/***************************************************************/
+	function copy_segment(seg) {
+		var copy = {};
+		copy.startBeat = seg.startBeat;
+		copy.endBeat = seg.endBeat;
+		if (seg.id != undefined) copy.id = seg.id;
+		if (seg.bufferStart != undefined) copy.bufferStart = seg.bufferStart;
+		if (seg.bufferEnd != undefined) copy.bufferEnd = seg.bufferEnd;
+		if (seg.bpm != undefined) copy.bpm = seg.bpm;
+		if (seg.audioId != undefined) copy.audioId = seg.audioId;
+		return copy;
 	}
 
 	function change_start(oldSegment, newSegment) {
@@ -361,6 +379,41 @@ function SegmentsSequencer(params) {
 		oldSegment.bufferEnd  = newBufEnd;
 	}
 
+	function override_segments(segments, newSegment, idx) {
+		for (var i=idx; i<segments.length; i++) {
+			if (segments[i].endBeat > newSegment.endBeat) {
+				change_start(segments[i], newSegment);
+				break;
+			}
+		}
+		segments.splice(idx, i-idx, newSegment);
+	}
+
+	function joined_silent_neighbours(segments, pi, i, ni) {
+		if (segments[i].id != undefined)
+			return false;
+
+		if (pi != undefined && ni != undefined && segments[pi].id == undefined && segments[ni].id == undefined) {
+			var newSegment = { startBeat: segments[pi].startBeat, endBeat: segments[ni].endBeat };
+			segments.splice(pi, 3, newSegment);
+			return true;
+		} else if (pi != undefined && segments[pi].id == undefined) {
+			var newSegment = { startBeat: segments[pi].startBeat, endBeat: segments[i].endBeat };
+			segments.splice(pi, 2, newSegment);
+			return true;
+		} else if (ni != undefined && segments[ni].id == undefined) {
+			var newSegment = { startBeat: segments[i].startBeat, endBeat: segments[ni].endBeat };
+			segments.splice(i, 2, newSegment);
+			return true;
+		}
+	}
+
+
+
+
+	/***************************************************************/
+	/******************* BINARY SEARCH FUNCTIONS *******************/
+	/***************************************************************/
 	function find_index(values, target, compareFn) {
 		if (values.length == 0 || compareFn(target, values[0]) < 0) { 
 			return [0]; 
@@ -387,17 +440,5 @@ function SegmentsSequencer(params) {
 			return modified_binary_search(values, middle+1, end, target, compareFn); 
 		else 
 			return [middle]; //found!
-	}
-
-	function copy_segment(seg) {
-		var copy = {};
-		copy.startBeat = seg.startBeat;
-		copy.endBeat = seg.endBeat;
-		if (seg.id != undefined) copy.id = seg.id;
-		if (seg.bufferStart != undefined) copy.bufferStart = seg.bufferStart;
-		if (seg.bufferEnd != undefined) copy.bufferEnd = seg.bufferEnd;
-		if (seg.bpm != undefined) copy.bpm = seg.bpm;
-		if (seg.audioId != undefined) copy.audioId = seg.audioId;
-		return copy;
 	}
 }
