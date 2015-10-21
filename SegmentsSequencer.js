@@ -1,9 +1,10 @@
 function SegmentsSequencer(params) {
 
-	var innerSegmentCursor = 0;
-	var midBufferL = [];
-	var midBufferR = [];
+	var bufferSampleCursor;
 	var FRAME_SIZE = params.frameSize || 4096;
+
+	var midBufferL = new CBuffer(Math.round(FRAME_SIZE*2));
+	var midBufferR = new CBuffer(Math.round(FRAME_SIZE*2));
 	var stretcherL = new OLATS(FRAME_SIZE);
 	var stretcherR = new OLATS(FRAME_SIZE);
 
@@ -12,13 +13,32 @@ function SegmentsSequencer(params) {
 	var currentSegment = 0;
 	var il = new Float32Array(FRAME_SIZE);
 	var ir = new Float32Array(FRAME_SIZE);
-	var zeros = new Float32Array(FRAME_SIZE * 3);
+	var zeros = new Float32Array(FRAME_SIZE);
+
 	var audioBuffers = {};
+
 	var currentTime = 0; // measured in samples.
-	var bpmTimeline = params.bpmTimeline || new BPMTimeline(params.initialBPM); 
+	var bpmTimeline = params.bpmTimeline || new BPMTimeline(params.initialBPM || 120); 
 	var sampleRate = params.sampleRate || 44100;
 
 	this.sss = segments;
+
+	// var on_bpm_timeline_change = function(eType, data) {
+	// 	// TODO: este event listener poderá servir para gerir o 
+	// 	// buffer start e end dos segmentos de silêncio.
+	// }
+
+	// var observerId = "ss" + Math.random();
+	// bpmTimeline.add_event_listener(observerId+"-add", "add-tempo-marker", on_bpm_timeline_change);
+	// bpmTimeline.add_event_listener(observerId+"-remove", "remove-tempo-marker", on_bpm_timeline_change);
+	// bpmTimeline.add_event_listener(observerId+"-edit", "edit-tempo-marker", on_bpm_timeline_change);
+
+
+
+
+	this.get_bpmtimeline = function() {
+		return bpmTimeline;
+	}
 
 
 	// newTime: Number, units: "beats" | "seconds"
@@ -46,11 +66,12 @@ function SegmentsSequencer(params) {
 
 		if (idx.length == 1) {
 			currentSegment = idx[0];
-			innerSegmentCursor = segments[currentSegment].bufferStart;
+			bufferSampleCursor = Math.round(segments[currentSegment].bufferStart);
 		} else {
 			var seg = segments[idx[0]];
 			var coef = (newTime - seg.startBeat) / (seg.endBeat - seg.startBeat);
-			innerSegmentCursor = Math.round(seg.bufferStart + coef * (seg.bufferEnd - seg.bufferStart));
+			currentSegment = idx[0]
+			bufferSampleCursor = Math.round(seg.bufferStart + coef * (seg.bufferEnd - seg.bufferStart));
 		}
 	}
 
@@ -72,18 +93,33 @@ function SegmentsSequencer(params) {
 		}
 	}
 
-	this.generate_block = function(outputAudioBuffer, units) {
+	this.generate_block = function(output) {
+		if (output instanceof AudioBuffer && output.numberOfChannels == 2 && output.sampleRate == sampleRate) {
+			_generate_block(output.getChannelData(0), output.getChannelData(1), output.length);
+		} else if (output.L && output.R) {
+			_generate_block(output.L, output.R, output.L.length);
+		} else 
+			throw {
+				message: "Invalid parameters", 
+				parameters: {
+					name: 'output',
+					value: output
+				}
+			};
+	}
 
-		while (midBufferL.length <= outputAudioBuffer.length && midBufferR.length <= outputAudioBuffer.length) {
+	function _generate_block(outputL, outputR, wantedNumberOfSamples) {
 
-			if (innerSegmentCursor == undefined) 
-				innerSegmentCursor = segments[currentSegment].bufferStart;
+		while (midBufferL.size <= wantedNumberOfSamples) {
+
+			if (bufferSampleCursor == undefined) 
+				bufferSampleCursor = segments[currentSegment].bufferStart;
 
 			var midAlpha = 0;
 
 			var inputSamplesCount = 0;
 
-			var _innerSegmentCursor = innerSegmentCursor;
+			var _bufferSampleCursor = bufferSampleCursor;
 
 			var curSeg;
 
@@ -91,14 +127,17 @@ function SegmentsSequencer(params) {
 			 * From the current segment, try to obtain FRAME_SIZE samples. If there are less than
 			 * FRAME_SIZE samples in the current segment, obtain samples from the next segment.
 			 */
-			for (var i=currentSegment; inputSamplesCount < FRAME_SIZE && i < segments.length; i++, currentSegment++) {
+			for (var i=currentSegment; inputSamplesCount < FRAME_SIZE && i < segments.length; i++) {
 
 				curSeg = segments[i];
 				
-				if (_innerSegmentCursor == undefined)
-					_innerSegmentCursor = curSeg.bufferStart || Math.round(bpmTimeline.time(curSeg.startBeat) * sampleRate);
+				if (_bufferSampleCursor == undefined)
+					_bufferSampleCursor = curSeg.bufferStart || Math.round(bpmTimeline.time(curSeg.startBeat) * sampleRate);
 
-				var incr = Math.min(FRAME_SIZE - inputSamplesCount, curSeg.bufDuration);
+				var incr = Math.min(FRAME_SIZE - inputSamplesCount, (curSeg.bufferEnd - curSeg.bufferStart) || Number.MAX_VALUE);
+
+				if (incr != FRAME_SIZE)
+					currentSegment++
 
 				if (audioBuffers[curSeg.audioId] != undefined) {
 					/*
@@ -108,12 +147,12 @@ function SegmentsSequencer(params) {
 					 *	master tempo of the BPMTimeline in order to increment "midAlpha".
 					 */
 					var buffer = audioBuffers[curSeg.audioId].buffer;
-					il.set(buffer.getChannelData(0).subarray(_innerSegmentCursor, _innerSegmentCursor + incr), inputSamplesCount);
-					ir.set(buffer.getChannelData(1).subarray(_innerSegmentCursor, _innerSegmentCursor + incr), inputSamplesCount);
+					il.set(buffer.getChannelData(0).subarray(_bufferSampleCursor, _bufferSampleCursor + incr), inputSamplesCount);
+					ir.set(buffer.getChannelData(1).subarray(_bufferSampleCursor, _bufferSampleCursor + incr), inputSamplesCount);
 					inputSamplesCount += incr;
-					var masterBPM = bpmTimeline.tempo_at_time((currentTime + inputSamplesCount) / sampleRate);
+					var masterTempo = bpmTimeline.tempo_at_time((currentTime + inputSamplesCount) / sampleRate);
 					midAlpha += (incr/FRAME_SIZE) * (curSeg.bpm / masterTempo);
-					_innerSegmentCursor += incr;
+					// _bufferSampleCursor += incr;
 				} else {
 					/*
 					 *	If this segment is a silent one, fill the input arrays with "incr" zeros.
@@ -128,11 +167,11 @@ function SegmentsSequencer(params) {
 
 				/*
 				 * If there aren't enough samples in the current segment, 
-				 * "_innerSegmentCursor = undefined" in order to use the "bufferStart" 
+				 * "_bufferSampleCursor = undefined" in order to use the "bufferStart" 
 				 * from the next segment.
 				 */
 
-				_innerSegmentCursor = undefined;
+				_bufferSampleCursor = undefined;
 
 			}
 
@@ -143,32 +182,25 @@ function SegmentsSequencer(params) {
 			 */
 
 			var alpha = midAlpha;
-			olaL.set_alpha(alpha);
-			olaR.set_alpha(alpha);
-
-			if (olaL.is_clean()) {
-				olaL.process(il);
-				olaR.process(ir);
-			} else {
-				midBufferL = midBufferL.concat(olaL.process(il));
-				midBufferR = midBufferR.concat(olaR.process(ir));
-			}
-
-			var hop = olaL.get_ra();
+			stretcherL.set_alpha(alpha);
+			stretcherR.set_alpha(alpha);
+			
+			stretcherL.process(il, midBufferL);
+			stretcherR.process(ir, midBufferR);
 
 			/*
-			 *	Calculate the new inner segment innerSegmentCursor. 
+			 *	Calculate the new inner segment bufferSampleCursor. 
 			 */
 
-			var newPosition = innerSegmentCursor + hop;
+			bufferSampleCursor += stretcherL.get_ha();
 
-			if (newPosition > curSeg.bufferEnd || Math.round(bpmTimeline.time(curSeg.endBeat) * sampleRate)) {
-				var oldSegmentEnd = segments[currentSegment].end;
+			if (bufferSampleCursor > curSeg.bufferEnd || 
+					bufferSampleCursor > Math.round(bpmTimeline.time(curSeg.endBeat) * sampleRate)) {
+				var oldBufferEnd = segments[currentSegment].bufferEnd;
+				var remainingHop = (bufferSampleCursor - oldBufferEnd);
 				currentSegment++;
-				innerSegmentCursor = intervals[currentSegment].bufferStart + newPosition - oldSegmentEnd;
-			} else {
-				innerSegmentCursor = newPosition;
-			}
+				bufferSampleCursor = segments[currentSegment].bufferStart + remainingHop;
+			} 
 
 		}
 
@@ -176,15 +208,13 @@ function SegmentsSequencer(params) {
 		 *	Write to the output audio buffer.
 		 */
 
-		var ol = outputAudioBuffer.getChannelData(0);
-		var or = outputAudioBuffer.getChannelData(1);
+		var ol = outputL;
+		var or = outputR;
 
-		for (var i=0; i<outputAudioBuffer.length; i++, currentTime++) {
+		for (var i=0; i<wantedNumberOfSamples; i++, currentTime++) {
 			ol[i] = midBufferL.shift();
 			or[i] = midBufferR.shift();
 		}
-
-		return this.get_current_time(units);
 	}
 
 	// params: {id} || {startTime, endTime, units}
@@ -228,7 +258,7 @@ function SegmentsSequencer(params) {
 		}
 
 		_add_segment({
-			audioId : audioId, id : id, 
+			audioId : audioId, id : id, bpm : bpm, 
 			bufferStart : bufferStart, bufferEnd  : bufferEnd, 
 			startBeat : startBeat, endBeat : endBeat
 		});
@@ -243,10 +273,15 @@ function SegmentsSequencer(params) {
 			idx = idx[0];
 
 			if (idx != segments.length-1) {
-				// INÍCIO DE OUTRO SEGMENTO OU PRIMEIRO
+				/*
+				 *	CASE 1: NEW SEGMENT STARTS AT THE BEGINNING OF THE SEGMENTS LIST.
+				 *	CASE 2: NEW SEGMENT STARTS AT THE BEGINNING OF AN EXISTING SEGMENT.
+				 */
 				override_segments(segments, newSegment, idx);
 			} else {
-				// ÚLTIMO SEGMENTO
+				/*
+				 *	CASE 3: NEW SEGMENT IS THE LAST ONE IN THE SEGMENT LIST
+				 */
 				if (idx == segments.length-1) {
 					change_end(segments[idx], newSegment);
 
@@ -267,7 +302,9 @@ function SegmentsSequencer(params) {
 			var pIdx = idx[0];
 			var nIdx = idx[1];
 
-			// SOBREPÕEM-SE A DOIS (OU MAIS) SEGMENTOS
+			/*
+			 *	CASE 4: NEW SEGMENT OVERLAPS TWO, OR MORE, SEGMENTS.
+			 */
 			if (newSegment.endBeat < segments[pIdx].endBeat) {
 				var copy = copy_segment(segments[pIdx]);
 				change_end(segments[pIdx], newSegment);
